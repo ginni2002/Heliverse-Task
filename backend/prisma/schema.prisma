@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  MANAGER
+  PANTRY_STAFF
+  DELIVERY_PERSONNEL
+}
+
+enum MealType {
+  MORNING
+  EVENING
+  NIGHT
+}
+
+enum PreparationStatus {
+  PENDING
+  PREPARING
+  READY
+  DELIVERED
+}
+
+enum AlertType {
+  DELAYED_DELIVERY
+  PREPARATION_ISSUE
+  KITCHEN_ISSUE
+  DIETARY_CONCERN
+}
+
+//// ------------------------------------------------------
+//// User Details
+//// ------------------------------------------------------
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  role        UserRole
+  name        String
+  contactInfo String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+//// ------------------------------------------------------
+//// Patient Details
+//// ------------------------------------------------------
+
+model Patient {
+  id               String      @id @default(uuid())
+  name             String
+  diseases         String[]
+  allergies        String[]
+  roomNumber       String
+  bedNumber        String
+  floorNumber      String
+  age              Int
+  gender           String
+  contactInfo      String
+  emergencyContact String
+  dietCharts       DietChart[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+//// ------------------------------------------------------
+//// Diet Chart
+//// ------------------------------------------------------
+
+model DietChart {
+  id        String    @id @default(uuid())
+  patientId String
+  patient   Patient   @relation(fields: [patientId], references: [id])
+  meals     Meal[]
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+//// ------------------------------------------------------
+//// Meal Details
+//// ------------------------------------------------------
+
+model Meal {
+  id           String        @id @default(uuid())
+  dietChartId  String
+  dietChart    DietChart     @relation(fields: [dietChartId], references: [id])
+  mealType     MealType
+  ingredients  String[]
+  instructions String[]
+  preparations Preparation[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+//// ------------------------------------------------------
+//// Preparation Information
+//// ------------------------------------------------------
+
+model Preparation {
+  id             String            @id @default(uuid())
+  mealId         String
+  meal           Meal              @relation(fields: [mealId], references: [id])
+  status         PreparationStatus
+  assignedTo     String?
+  deliveredBy    String?
+  deliveryNote   String?
+  deliveredAt    DateTime?
+  deliveryStatus DeliveryStatus?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+//// ------------------------------------------------------
+//// Delivery Status
+//// ------------------------------------------------------
+
+model DeliveryStatus {
+  id            String      @id @default(uuid())
+  preparationId String      @unique
+  preparation   Preparation @relation(fields: [preparationId], references: [id])
+  status        String
+  expectedTime  DateTime
+  actualTime    DateTime?
+  delay         Int?
+  alerts        Alert[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+//// ------------------------------------------------------
+//// Alert Status
+//// ------------------------------------------------------
+
+model Alert {
+  id               String         @id @default(uuid())
+  deliveryStatusId String
+  deliveryStatus   DeliveryStatus @relation(fields: [deliveryStatusId], references: [id])
+  type             AlertType
+  message          String
+  isResolved       Boolean        @default(false)
+  resolvedAt       DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
